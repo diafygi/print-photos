@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <link rel="icon" href="data:;base64,iVBORw0KGgo="><!-- disable favicon request -->
+        <meta name="robots" content="noindex,nofollow">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Photo Print Template</title>
+        <style>
+            /* reset */
+            *, *::before, *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            /* page sizes */
+            .sheet {
+                overflow: hidden;
+                position: relative;
+                box-sizing: border-box;
+                page-break-after: always;
+            }
+            .sheet.A4               { width: 210mm; height: 296mm; }
+            .sheet.A4.landscape     { width: 296mm; height: 210mm; }
+            .sheet.letter           { width: 8.5in; height: 11in; }
+            .sheet.letter.landscape { width: 11in; height: 8.5in; }
+            @media screen {
+                .sheet {
+                    display: inline-block;
+                    box-shadow: 0 .5mm 2mm rgba(0,0,0,.3);
+                    margin: 1em;
+                }
+            }
+            @media print {
+                .noprint { display: none !important; }
+                .sheet.A4               { width: 210mm; }
+                .sheet.A4.landscape     { width: 297mm; }
+                .sheet.letter           { width: 8.5in; }
+                .sheet.letter.landscape { width: 11in; }
+            }
+
+            /* print preview */
+            @page {
+                margin: 0;
+                size: letter; /* TODO */
+            }
+
+            /* photo layouts */
+            .sheet.photo4x6,
+            .sheet.photo5x7,
+            .sheet.photo8x10 {
+                text-align: center;
+            }
+            .sheet.photo4x6 .photo,
+            .sheet.photo5x7 .photo,
+            .sheet.photo8x10 .photo {
+                display: inline-block;
+                background-color: lightgray;
+                overflow: hidden;
+                text-align: center;
+            }
+            .sheet.photo4x6 .photo {
+                margin-top: 1in;
+                width: 6in;
+                height: 4in;
+            }
+            .sheet.photo5x7 .photo {
+                margin-top: 0.3in;
+                width: 7in;
+                height: 5in;
+                overflow: hidden;
+            }
+            .sheet.photo8x10 .photo {
+                margin-top: 0.5in;
+                width: 8in;
+                height: 10in;
+                overflow: hidden;
+            }
+
+            /* app styling */
+            body {
+                text-align: center;
+                font-family: sans-serif;
+            }
+            #config-section {
+                text-align: left;
+                display: inline-block;
+                padding: 1em;
+                width: 100%;
+                max-width: 8.5in;
+            }
+            #config-section > div {
+                margin-top: 1em;
+            }
+            #config-section span {
+                display: inline-block;
+                margin-top: 1em;
+            }
+            #config-section input,
+            #config-section select {
+                padding: 0.1em 0.5em;
+                margin-right: 1em;
+            }
+            #config-section label[for='photo-files'] {
+                font-weight: bold;
+            }
+            #config-section input[type='submit'] {
+                font-size: 120%;
+                margin-right: 1em;
+            }
+            #load-error {
+                color: red;
+            }
+            @media screen {
+                #print-section {
+                    width: 100%;
+                    overflow: auto;
+                }
+            }
+            /* Footer */
+            #footer {
+                font-size: 80%;
+            }
+        </style>
+    </head>
+    <body>
+        <form id="config-section" class="noprint">
+            <h1>Photo Printing Template</h1>
+            <div>
+                <span>
+                    <label for="photo-files">Select photos:</label>
+                    <input type="file" id="photo-files" multiple>
+                </span>
+
+                <span>
+                    <span>
+                        <label for="page-format">Page format:</label>
+                        <select id="page-format">
+                            <option value="letter" selected>Letter</option>
+                            <option value="A4">A4</option>
+                        </select>
+                    </span>
+
+                    <span>
+                        <label for="photo-format">Photo format:</label>
+                        <select id="photo-format">
+                            <option value="photo4x6">4" x 6"</option>
+                            <option value="photo5x7" selected>5" x 7"</option>
+                            <option value="photo8x10">8" x 10"</option>
+                        </select>
+                    </span>
+                </span>
+            </div>
+            <div>
+                <input type="submit" value="Print">
+                <input type="reset" value="Reset">
+            </div>
+            <div id="load-error">
+            </div>
+        </form>
+        <div id="print-section">
+        </div>
+        <div id="footer">
+            This website is static, so it can be saved and loaded locally. Just right-click and "Save Page As.."!<br/>
+            Released under AGPLv3 license |
+            Source code: <a href="https://github.com/diafygi/print-photos" target="_blank" rel="noopener noreferrer">https://github.com/diafygi/print-photos</a>
+        </div>
+        <script>
+            async function photosChanged() {
+                // clear the current set of pages
+                const printSection = document.getElementById("print-section");
+                printSection.innerHTML = "";
+                const loadError = document.getElementById("load-error");
+                loadError.innerHTML = "";
+                // loop through the photos, adding them to pages
+                const files = document.getElementById("photo-files").files;
+                const photoFormat = document.getElementById("photo-format").value;
+                const pageFormat = document.getElementById("page-format").value;
+                let fileIndex = 0;
+                while (fileIndex < files.length) {
+                    // get or create the page to place the photo
+                    let curPage = null;
+                    if (
+                        (photoFormat === "photo4x6" || photoFormat === "photo5x7")
+                        && (fileIndex % 2 === 1)
+                    ) {
+                        curPage = printSection.querySelector(".sheet:last-child");
+                    }
+                    else {
+                        curPage = document.createElement("div");
+                        curPage.classList.add("sheet");
+                        curPage.classList.add(pageFormat);
+                        curPage.classList.add(photoFormat);
+                        printSection.appendChild(curPage);
+                    }
+                    // get the current photo's dimensions
+                    let imgErr = null;
+                    const img = document.createElement("img");
+                    img.src = URL.createObjectURL(files[fileIndex]);
+                    img.onerror = (err) => { imgErr = err; };
+                    await new Promise((resolve) => {
+                        let intervalId = setInterval(
+                            () => {
+                                if (img.height || img.width || imgErr) {
+                                    clearInterval(intervalId);
+                                    resolve();
+                                }
+                            },
+                            100,
+                        );
+                    });
+                    if (imgErr) {
+                        loadError.textContent = `File "${files[fileIndex].name}" doesn't appear to be an image.`;
+                        printSection.innerHTML = "";
+                        return;
+                    }
+                    // insert the photo on the page
+                    const photo = document.createElement("div");
+                    photo.appendChild(img);
+                    photo.classList.add("photo");
+                    curPage.appendChild(photo);
+                    // adjust the image to fit the photo format
+                    const imgRatio = img.width / img.height;
+                    const photoRatio = photo.offsetWidth / photo.offsetHeight;
+                    console.log("photo", photo, photoRatio, 1/photoRatio, photo.offsetWidth, photo.offsetHeight);
+                    console.log(fileIndex, files[fileIndex].name, img, imgRatio, img.width, img.height);
+                    if (photoFormat === "photo4x6" || photoFormat === "photo5x7") {
+                        // extra wide landscape
+                        if (imgRatio >= photoRatio) {
+                            const xOffset = -1.0 * ((photo.offsetHeight * imgRatio) - photo.offsetWidth) / 2.0;
+                            img.style.marginLeft = Math.round(xOffset, 4) + "px";
+                            img.style.height = photo.offsetHeight + "px";
+                        }
+                        // normal landscape
+                        else if (imgRatio >= 1.0) {
+                            const yOffset = -1.0 * ((photo.offsetWidth / imgRatio) - photo.offsetHeight) / 2.0;
+                            img.style.marginTop = Math.round(yOffset, 4) + "px";
+                            img.style.width = photo.offsetWidth + "px";
+                        }
+                        // normal portrait
+                        else if (imgRatio >= (1 / photoRatio)) {
+                            const yOffset = -1.0 * (photo.offsetWidth - photo.offsetHeight) / 2.0;
+                            img.style.marginTop = Math.round(yOffset, 4) + "px";
+                            img.style.height = photo.offsetWidth + "px";
+                            img.style.transform = "rotate(90deg)";
+                        }
+                        // extra tall portrait
+                        else if (imgRatio < (1 / photoRatio)) {
+                            const yOffset = -1.0 * ((photo.offsetHeight / imgRatio) - photo.offsetHeight) / 2.0;
+                            img.style.marginTop = Math.round(yOffset, 4) + "px";
+                            img.style.width = photo.offsetHeight + "px";
+                            img.style.transform = "rotate(90deg)";
+                        }
+                    }
+                    else if (photoFormat === "photo8x10") {
+                        // extra wide landscape
+                        if (imgRatio >= (1 / photoRatio)) {
+                            const yOffset = (photo.offsetHeight - photo.offsetWidth) / 2.0;
+                            const xOffset = -1.0 * ((photo.offsetWidth * imgRatio) - photo.offsetWidth) / 2.0;
+                            img.style.marginTop = Math.round(yOffset, 4) + "px";
+                            img.style.marginLeft = Math.round(xOffset, 4) + "px";
+                            img.style.height = photo.offsetWidth + "px";
+                            img.style.transform = "rotate(90deg)";
+                        }
+                        // normal landscape
+                        else if (imgRatio >= 1.0) {
+                            const yOffset = (photo.offsetHeight - (photo.offsetHeight / imgRatio)) / 2.0;
+                            const xOffset = -1.0 * (photo.offsetHeight - photo.offsetWidth) / 2.0;
+                            img.style.marginTop = Math.round(yOffset, 4) + "px";
+                            img.style.marginLeft = Math.round(xOffset, 4) + "px";
+                            img.style.width = photo.offsetHeight + "px";
+                            img.style.transform = "rotate(90deg)";
+                        }
+                        // normal portrait
+                        else if (imgRatio >= photoRatio) {
+                            const xOffset = -1.0 * ((photo.offsetHeight * imgRatio) - photo.offsetWidth) / 2.0;
+                            img.style.marginLeft = Math.round(xOffset, 4) + "px";
+                            img.style.height = photo.offsetHeight + "px";
+                        }
+                        // extra tall portrait
+                        else if (imgRatio < photoRatio) {
+                            const yOffset = -1.0 * ((photo.offsetWidth / imgRatio) - photo.offsetHeight) / 2.0;
+                            img.style.marginTop = Math.round(yOffset, 4) + "px";
+                            img.style.width = photo.offsetWidth + "px";
+                        }
+                    }
+                    // iterate to next picture
+                    fileIndex += 1;
+                }
+            }
+
+            document.getElementById("page-format").addEventListener("change", photosChanged);
+            document.getElementById("photo-format").addEventListener("change", photosChanged);
+            document.getElementById("photo-files").addEventListener("change", photosChanged);
+            document.getElementById("config-section").addEventListener("reset", photosChanged);
+            document.getElementById("config-section").addEventListener("submit", async (e) => {
+                e.preventDefault();
+                window.print();
+            });
+
+        </script>
+    </body>
+</html>
